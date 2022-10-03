@@ -1,19 +1,19 @@
 import argparse
+import inspect
 import json
+import multiprocessing
 import pandas as pd
+import random
 import re
 import sys
+import threading
 import time
+
+from flask import Flask, jsonify, request, Response
+app = Flask(__name__)
 
 import merkury
 
-from flask import Flask, jsonify, request, Response
-import multiprocessing
-import threading
-import inspect
-
-
-app = Flask(__name__)
 
 # ###
 # Functions
@@ -26,7 +26,7 @@ def hex_to_rgb(value):
 
 
 # ###
-# Special Configs
+# Home Functions
 # ###
 
 def getInfo():
@@ -47,26 +47,19 @@ def getInfo():
     merkury.deskLight.turn_on()
     
     data = pd.DataFrame([infoDeskLight,infoShelfLight, infoTopShelfLight, infoGameLight, infoOverheadLight, infoLetterLight], columns=['LightInfo'])
-    data = data.to_dict()  # convert dataframe to dictionary
-    response = jsonify({'data': data})
+    response = jsonify({'data': data.to_dict()})
     return response
-    time.sleep(1)
-    print(inspect.stack()[0][3]+' fired off successfully')
     
-def setDesk():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(25)
-    time.sleep(0.1)
-    
-    merkury.overheadLight.turn_on()
-    merkury.overheadLight.set_value(2, 255)
-     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
+
+def setEffect(modal):
+    if modal == 'off':
+        setOff()
+    elif modal == 'rainbow':
+        setRainbow()
+    elif modal == 'study':
+        setStudy()
+
+
 def setOff():
     merkury.deskLight.turn_on()
     merkury.deskLight.set_mode('white')
@@ -90,10 +83,10 @@ def setOff():
     time.sleep(1)
     print(inspect.stack()[0][3]+' fired off successfully')
 
+
 def setRainbow():
     merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(50)
+    merkury.deskLight.set_scene(4)
     time.sleep(0.1)
 
     merkury.shelfLight.turn_on()
@@ -109,10 +102,8 @@ def setRainbow():
     merkury.letterLight.set_mode(mode='scene')
     time.sleep(0.1)
     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
     print(inspect.stack()[0][3]+' fired off successfully')
+
 
 def setStudy():
     merkury.deskLight.turn_on()
@@ -142,151 +133,59 @@ def setStudy():
     time.sleep(0.1)
      
     time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
+    merkury.deskLight.set_brightness_percentage(75)
     time.sleep(0.5)
     print(inspect.stack()[0][3]+' fired off successfully')
 
-# ###
-# Stream Configs
-# ###
-    
-def setStream():
+
+def setDeskLight(modal):
     merkury.deskLight.turn_on()
     merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(50)
+    merkury.deskLight.set_brightness_percentage(25)
     time.sleep(0.1)
 
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(255, 132, 0)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0, 157, 255)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(255, 49, 155)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(255, 238, 0)
-    time.sleep(0.1)
-    
-    merkury.overheadLight.turn_on()
-    merkury.overheadLight.set_value(2, 125)
-    time.sleep(0.1)
-     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
-def setZoom():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(50)
-    time.sleep(0.1)
+    if modal == 'on':
+        merkury.overheadLight.turn_on()
+        merkury.overheadLight.set_value(2, 255)
 
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(0, 200, 255)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0, 255, 0)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(0, 200, 255)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(0, 255, 0)
-    time.sleep(0.1)
-    
-    merkury.overheadLight.turn_on()
-    merkury.overheadLight.set_value(2, 255)
-    time.sleep(0.1)
-     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
+        time.sleep(0.4)          
+        merkury.deskLight.set_brightness_percentage(50)
+    else:
+        merkury.overheadLight.turn_off(switch=0)
+        time.sleep(0.4)    
+        merkury.deskLight.set_mode('colour')    
+
     time.sleep(0.5)
     print(inspect.stack()[0][3]+' fired off successfully')
 
-    
-def setPlay():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(50)
-    time.sleep(0.1)
 
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(255, 132, 0)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0, 157, 255)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(255, 49, 155)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(255, 238, 0)
-    time.sleep(0.1)
+def setCustomColors(colorDict):
+    numColors = len(colorDict)
     
-    merkury.overheadLight.turn_off(switch=0)
-    time.sleep(0.1)
-     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-        
-def setRainy():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(50)
-    time.sleep(0.1)
+    colorList = list(colorDict.values())
+    random.shuffle(colorList)
 
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(0, 0, 128)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0, 0, 255)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(0, 0, 128)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(0, 0, 255)
-    time.sleep(0.1)
-    
-    merkury.overheadLight.turn_off(switch=0)
-    time.sleep(0.1)
-     
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
-# ###
-# Ambience/Stream Configs
-# ###
-   
-   
-# ###
-# Destiny 2 Configs
-# ###
+    if numColors < 1:
+        return
+    elif numColors == 1:
+        r1, g1, b1 = hex_to_rgb(colorList[0])
+        r2, r3, r4, g2, g3, g4, b2, b3, b4 = r1, r1, r1, g1, g1, g1, b1, b1, b1
+    elif numColors ==2:
+        r1, g1, b1 = hex_to_rgb(colorList[0])
+        r2, g2, b2 = hex_to_rgb(colorList[1])
+        r3, g3, b3 = r1, g1, b1
+        r4, g4, b4 = r2, g2, b2
+    elif numColors ==3:
+        r1, g1, b1 = hex_to_rgb(colorList[0])
+        r2, g2, b2 = hex_to_rgb(colorList[1])
+        r3, g3, b3 = hex_to_rgb(colorList[2])
+        r4, g4, b4 = r2, g2, b2
+    elif numColors <=4:
+        r1, g1, b1 = hex_to_rgb(colorList[0])
+        r2, g2, b2 = hex_to_rgb(colorList[1])
+        r3, g3, b3 = hex_to_rgb(colorList[2])
+        r4, g4, b4 = hex_to_rgb(colorList[3])    
 
-def setArc():
     merkury.deskLight.turn_on()
     merkury.deskLight.set_mode('white')
     merkury.deskLight.set_brightness_percentage(25)
@@ -294,109 +193,25 @@ def setArc():
 
     merkury.shelfLight.turn_on()
     merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(0,206,209)
+    merkury.shelfLight.set_colour(r1, g1, b1)
     time.sleep(0.1)
     merkury.gameLight.turn_on()
     merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0,183,235)
+    merkury.gameLight.set_colour(r2, g2, b2)
     time.sleep(0.1)
     merkury.topShelfLight.turn_on()
     merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(0,206,209)
+    merkury.topShelfLight.set_colour(r3, g3, b3)
     time.sleep(0.1)
     merkury.letterLight.turn_on()
     merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(0,183,235)
+    merkury.letterLight.set_colour(r4, g4, b4)
     time.sleep(0.1)
     
     time.sleep(0.4)    
     merkury.deskLight.set_mode('colour')
     time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
-def setSolar():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(25)
-    time.sleep(0.1)
-
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(255, 159, 0)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(255, 94, 14)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(255, 159, 0)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(255, 94, 14)
-    time.sleep(0.1)
-    
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
-def setStasis():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(25)
-    time.sleep(0.1)
-
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(0, 24, 94)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(0, 60, 255)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(0, 24, 94)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(0, 60, 255)
-    time.sleep(0.1)
-    
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
-    
-def setVoid():
-    merkury.deskLight.turn_on()
-    merkury.deskLight.set_mode('white')
-    merkury.deskLight.set_brightness_percentage(25)
-    time.sleep(0.1)
-
-    merkury.shelfLight.turn_on()
-    merkury.shelfLight.set_mode('colour')    
-    merkury.shelfLight.set_colour(75, 0, 130)
-    time.sleep(0.1)
-    merkury.gameLight.turn_on()
-    merkury.gameLight.set_mode('colour')    
-    merkury.gameLight.set_colour(143, 0, 255)
-    time.sleep(0.1)
-    merkury.topShelfLight.turn_on()
-    merkury.topShelfLight.set_mode('colour')    
-    merkury.topShelfLight.set_colour(75, 0, 130)
-    time.sleep(0.1)
-    merkury.letterLight.turn_on()
-    merkury.letterLight.set_mode('colour')    
-    merkury.letterLight.set_colour(143, 0, 255)
-    time.sleep(0.1)
-    
-    time.sleep(0.4)    
-    merkury.deskLight.set_mode('colour')
-    time.sleep(0.5)
-    print(inspect.stack()[0][3]+' fired off successfully')
+    print(inspect.stack()[0][3]+' fired off successfully') 
 
 
 # ###
@@ -404,21 +219,31 @@ def setVoid():
 # ###
 
 def setTwitchalert(modal):
-    
-    duration = {'follow':10, 'sub':15, 'cheer':15, 'host':15, 'raid':30, 'donation':20}
+    duration = {'follow':10, 'sub':15, 'cheer':15, 'host':15, 'raid':20, 'donation':30}
     
     merkury.deskLight.turn_on()
     merkury.deskLight.set_scene(4)
     time.sleep(0.1)
+    merkury.shelfLight.turn_on()
+    merkury.shelfLight.set_scene(4)
+    time.sleep(0.1)
     merkury.gameLight.turn_on()
     merkury.gameLight.set_scene(4)
     time.sleep(0.1)
+    merkury.topShelfLight.turn_on()
+    merkury.topShelfLight.set_mode(mode='scene')
+    time.sleep(0.1)
     merkury.letterLight.turn_on()
-    merkury.letterLight.set_scene(4)
-    
+    merkury.letterLight.set_mode(mode='scene')
+    time.sleep(0.1)
+
     time.sleep(duration[modal])
     
+    merkury.shelfLight.set_mode('colour')
+    time.sleep(0.1)
     merkury.gameLight.set_mode('colour')
+    time.sleep(0.1)
+    merkury.topShelfLight.set_mode('colour')
     time.sleep(0.1)
     merkury.letterLight.set_mode('colour')
     time.sleep(0.1)
@@ -426,8 +251,8 @@ def setTwitchalert(modal):
     time.sleep(0.5)
     print(inspect.stack()[0][3]+'('+modal+') fired off successfully')
 
+
 def setChatalert(userHexColor):
-    print('Trying to change light to '+userHexColor)
     r, g, b = hex_to_rgb(userHexColor)
     merkury.deskLight.turn_on()
     merkury.deskLight.set_mode('white')
@@ -449,6 +274,7 @@ def setChatalert(userHexColor):
     time.sleep(0.5)
     print(inspect.stack()[0][3]+'('+userHexColor+') fired off successfully')
 
+
 # ###
 # Web Hooks and Queue Handling
 # ###
@@ -459,18 +285,30 @@ def lightsInfo():
 
 @app.route("/lights", methods=["POST"])
 def lightEndPoint():
-    command = request.args.get("command")
-    subCommand = request.args.get("effect")
-    q.put([command,subCommand])
-    return Response()
+    jsonCommand = request.get_json()
+    q.put(jsonCommand)
+    return 'Command Queued'
 
 def handler(command_queue):
     while True:
         command = command_queue.get() # blocking call
-        if command[1] is not None:
-            eval("set"+command[0].capitalize()+"('"+command[1]+"')")
+        if "effect" in command: # Tested
+            print(command['effect']+' was triggered')
+            setEffect(command['effect'])
+        elif "hexcodes" in command: # Dev
+            print(command['hexcodes'])
+            setCustomColors(command['hexcodes'])
+        elif "twitch" in command: # Tested
+            print(command['twitch']+' was triggered')
+            setTwitchalert(command['twitch'])
+        elif "desk" in command: # Tested
+            print('Desk was triggered')
+            setDeskLight(command['desk'])
+        elif "chat" in command: # Ready for Testing
+            print('Chat was triggered')
+            setChatalert(command['chat'])
         else:
-            eval('set'+command[0].capitalize()+'()') 
+            print('Unidentified Command')        
     
 
 # ###
@@ -478,18 +316,11 @@ def handler(command_queue):
 # ###
 
 if __name__ == "__main__":
-    print('Home Lights Starting') 
+    print('Test Lights Starting') 
     
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=handler, args=((q),))
-
     p.start()
-
-    app.run(host='0.0.0.0', port=64250)
-
+    app.debug = True
+    app.run(host='0.0.0.0', port=64251)
     p.join()
-    
-    print('Home Lights Server Started') 
-   
-
-
